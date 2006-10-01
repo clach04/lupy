@@ -158,7 +158,7 @@ def dumbWildSearch(qStr, keyword_str):
     """
     search_word  = re.escape(qStr)
     regex_keyword_search_str = """\w*%s\w*""" % search_word 
-    or_search_terms = re.findall(regex_keyword_search_str, all_keywords_str)
+    or_search_terms = re.findall(regex_keyword_search_str, keyword_str)
     q = boolSearch([], or_search_terms, [])
     return q
     
@@ -174,7 +174,7 @@ def runQuery(q, searcher):
 
        
       
-if __name__ == "__main__":
+def main():
     """One shot search.
     Opens and closes the index on every query.
     """
@@ -278,3 +278,6 @@ if __name__ == "__main__":
     searcher.close()
     
     print time.time() - tt
+
+if __name__ == "__main__":
+    main()
