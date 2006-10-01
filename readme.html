@@ -1,0 +1,226 @@
+<html>
+<head>
+    <title>Divmod.org :: Indexing and Searching With Lupy</title>
+</head>
+<body>
+
+NOTE this was originally taken from the divmod web site - but the api links in this document are broken.
+
+<div class="innercontent">
+            
+
+<div class="section" id="indexing-and-searching-with-lupy">
+<h1><a name="indexing-and-searching-with-lupy">Indexing and Searching With Lupy</a></h1>
+<div class="section" id="introduction">
+<h2><a name="introduction">Introduction</a></h2>
+<p>Check that Lupy has been installed correctly by starting Python
+and successfully doing:</p>
+<pre class="literal-block">import lupy
+</pre>
+<p>You can exit python.</p>
+<p>In this examples directory there is a directory named ./aesop/ which
+contains 30 files, each with a fable in them.</p>
+<p>To index these files type:</p>
+<pre class="literal-block">python index.py
+</pre>
+<p>You will see some confirmation that Lupy is adding the text files to
+an index. The index will be saved in a directory named <tt class="literal"><span class="pre">./aesopind/</span></tt>.</p>
+<p>Once indexing is finished, have a look in <tt class="literal"><span class="pre">./aesopind/</span></tt> and you will
+see a lot of files with names like <tt class="literal"><span class="pre">_19.tii</span></tt>. Each of these files belongs
+to a segment. This is what Lucene format indexes look like. The number
+of files in this directory depends on a lot of factors. Calling optimize()
+once in a while compacts all the segments into one.</p>
+<p>Back in the examples directory type:</p>
+<pre class="literal-block">python search.py
+</pre>
+<p>This will perform 4 different searches against the index that you just
+built and print the results.</p>
+<p>You should get output similar to this:</p>
+<pre class="literal-block">Query: fox
+Found in document aesop/3.txt (The Lion's Share)
+Found in document aesop/7.txt (The Fox and the Crow)
+Found in document aesop/20.txt (The Fox and the Mask)
+Found in document aesop/19.txt (The Fox and the Stork)
+
+Query: \fox and the crow\
+Found in document aesop/7.txt (The Fox and the Crow)
+
+Query: +fox-crow-lion
+Found in document aesop/20.txt (The Fox and the Mask)
+Found in document aesop/19.txt (The Fox and the Stork)
+
+Query: title:frog
+Found in document aesop/22.txt (The Frog and the Ox)
+</pre>
+</div>
+<div class="section" id="fields">
+<h2><a name="fields">Fields</a></h2>
+<p>The basic unit of data in a Lupy index is the field: a name paired
+with a value, either free text or a keyword. Fields have three
+independent boolean attributes: <em>stored</em>, <em>indexed</em>, and
+<em>tokenized</em>. Stored fields are included in search results when their
+containing document is matched, indexed fields are the ones actually
+searched, and tokenized fields are split into words (as opposed to
+being included as an opaque string). The default for <a href="http://divmod.org/projects/lupy/api/public/lupy.document.Field-class.html" class="reference">document.Field</a>
+is to be indexed and tokenized but not stored; this will be used for
+most of the text Lupy processes. <a href="http://divmod.org/projects/lupy/api/public/lupy.document-module.html#Keyword" class="reference">document.Keyword</a> produces stored,
+indexed, untokenized fields, and is useful for filenames or database
+IDs. <a href="http://divmod.org/projects/lupy/api/public/lupy.document-module.html#Text" class="reference">document.Text</a> produces stored, indexed, tokenized fields, and
+is useful for a document's title or summary.</p>
+</div>
+<div class="section" id="simple-indexing">
+<h2><a name="simple-indexing">Simple Indexing</a></h2>
+<p>Simple forms of document indexing can be accomplished easily. For
+example, here is the code from simple.py that creates an index and
+adds data from files to it (simplified for clarity):</p>
+<pre class="literal-block">index = Index(indexName, create=True)
+
+for name in os.listdir(filedir):
+    f = os.path.join(filedir, name)
+    text = open(f, 'rb').read().decode("latin-1")
+    title = text.split('\n\n\n')[0]
+    index.index(text=text, __title=title, _filename=f)
+    
+index.optimize()
+</pre>
+<p>First, a <a href="http://divmod.org/projects/lupy/api/public/lupy.indexer.Index-class.html" class="reference">indexer.Index</a> is created, which opens the directory that
+will contain the index files (and in this case, since <tt class="literal"><span class="pre">create</span></tt> is
+True, removes any existing index). Each file to be indexed is opened
+and Unicode text is extracted from it. The title of the fable being
+read is split off (the example files have their title as the first
+line, separated by three newlines from the text), and then <tt class="literal"><span class="pre">index()</span></tt>
+is called, pairing field names with indexable data. The names of
+arguments to <tt class="literal"><span class="pre">index()</span></tt> and field names, and indicate what Lupy
+should do with the data: names preceded with an underscore are Keyword
+fields, and names preceded with a double underscore are Text fields.
+Thus, <tt class="literal"><span class="pre">text</span></tt>, <tt class="literal"><span class="pre">title</span></tt>, and <tt class="literal"><span class="pre">filename</span></tt> are instances of Field,
+Text, and Keyword, respectively.</p>
+<p><tt class="literal"><span class="pre">index.optimize()</span></tt> is an optional call that merges all on-disk
+segments together into a single segment. It can be quite an expensive
+operation, but it can save space and speed up searches.</p>
+</div>
+<div class="section" id="simple-searching">
+<h2><a name="simple-searching">Simple Searching</a></h2>
+<p>When using the <a href="http://divmod.org/projects/lupy/api/public/lupy.indexer.Index-class.html" class="reference">indexer.Index</a> interface, simple searches can be done
+by passing the query string to the <tt class="literal"><span class="pre">find</span></tt> method, which returns a
+<a href="http://divmod.org/projects/lupy/api/public/lupy.search.hits.Hits-class.html" class="reference">Hits</a> object, a sequence of <a href="http://divmod.org/projects/lupy/api/public/lupy.document.Document-class.html" class="reference">Documents</a> found. For example:</p>
+<pre class="literal-block">hits = index.find('fox')
+for h in hits:
+   print 'Found in', h.get('filename')
+
+index.close()
+</pre>
+<p>Searches done in this fashion are done in all fields; documents
+containing any of the terms specified are returned. To search for
+phrases, enclose the query in double quotes. To search in a single
+field only, use <tt class="literal"><span class="pre">index.findInField(field=query)</span></tt>; the query will be
+parsed as with <tt class="literal"><span class="pre">find()</span></tt>.</p>
+<p>Note that an instance of <a href="http://divmod.org/projects/lupy/api/public/lupy.indexer.Index-class.html" class="reference">indexer.Index</a> can be used for both indexing
+and searching; just remember to call <tt class="literal"><span class="pre">close()</span></tt> on it when finished,
+to flush its contents to disk.</p>
+</div>
+<div class="section" id="advanced-searching">
+<h2><a name="advanced-searching">Advanced Searching</a></h2>
+<p>Queries can also be built by hand, using the <a href="http://divmod.org/projects/lupy/api/public/lupy.search.term.TermQuery-class.html" class="reference">TermQuery</a>,
+<a href="http://divmod.org/projects/lupy/api/public/lupy.search.phrase.PhraseQuery-class.html" class="reference">PhraseQuery</a>, and <a href="http://divmod.org/projects/lupy/api/public/lupy.search.boolean.BooleanQuery-class.html" class="reference">BooleanQuery</a> classes, and then run using an
+<a href="http://divmod.org/projects/lupy/api/public/lupy.search.indexsearcher.IndexSearcher-class.html" class="reference">IndexSearcher</a>. Examples of their use can be seen in search.py:</p>
+<pre class="literal-block">def termSearch(qStr):
+    t = Term('text', qStr)
+    q = TermQuery(t)
+    return q
+
+def phraseSearch(qStr):
+    q = PhraseQuery()
+    for p in qStr.split():
+        t = Term('text', p)
+        q.add(t)
+    return q
+
+
+def boolSearch(ands=[], ors=[], nots=[]):
+    q = BooleanQuery()
+
+    for a in ands:
+        t = Term('text', a)
+        tq = TermQuery(t)
+        q.add(tq, True, False)
+
+    for a in ors:
+        t = Term('text', a)
+        tq = TermQuery(t)
+        q.add(tq, False, False)
+
+    for a in nots:
+        t = Term('text', a)
+        tq = TermQuery(t)
+        q.add(tq, False, True)
+
+    return q
+</pre>
+<p>In particular, note that instances of <a href="http://divmod.org/projects/lupy/api/public/lupy.index.term.Term-class.html" class="reference">Term</a> must be
+created for each word in the query, and that the field that should be
+searched for it must be specified. Boolean queries can be used to
+combine other queries in various ways, either requiring or prohibiting
+search terms. Once your query has been constructed, pass it to
+<a href="http://divmod.org/projects/lupy/api/public/lupy.search.indexsearcher.IndexSearcher-class.html" class="reference">IndexSearcher</a>.search:</p>
+<pre class="literal-block">searcher = IndexSearcher(indexName)
+q = termSearch('fox')
+hits = searcher.search(q)
+for h in hits:
+    print 'Found in', h.get('filename')
+</pre>
+<p>A sequence of found documents is returned, as before.</p>
+</div>
+<div class="section" id="advanced-indexing">
+<h2><a name="advanced-indexing">Advanced Indexing</a></h2>
+
+<p>It is also possible to manually create <a href="http://divmod.org/projects/lupy/api/public/lupy.document.Document-class.html" class="reference">Documents</a> and put them
+in an index, via <a href="http://divmod.org/projects/lupy/api/public/lupy.index.indexwriter.IndexWriter-class.html" class="reference">IndexWriter</a>.
+This example is adapted from index.py:</p>
+
+<pre class="literal-block">index = IndexWriter(indexName, create=True)
+for name in os.listdir(dir):
+    fname = os.path.join(dir, name)
+    if os.path.isdir(fname) or os.path.islink(fname):
+        continue
+    text = open(fname,'rb').read().decode('latin-1')
+
+    d = document.Document()
+    t = document.Text('text',text, False)
+    d.add(t)
+    
+    f = document.Keyword('filename',name)
+    d.add(f)
+    
+    index.addDocument(d)
+    
+index.close()
+</pre>
+
+<p>Data is added to the index by building up <a href="http://divmod.org/projects/lupy/api/public/lupy.document.Document-class.html" class="reference">Documents</a> from various
+fields (in this case, the text from the file, and the filename), and calling
+<tt class="literal"><span class="pre">addDocument()</span></tt> on the index.
+Keyword fields, as before, are not tokenized, but are merely stored as opaque
+text, and returned with search results.</p>
+
+<p>IndexWriter (as well as indexer.Index) also take an <tt class="literal"><span class="pre">analyzer</span></tt> keyword argument,
+allowing you to specify your own token generator (which gets called with the
+string to be tokenized). The default is <a href="http://divmod.org/projects/lupy/api/public/lupy.index.documentwriter-module.html#standardTokenizer" class="reference">index.documentwriter.standardTokenizer</a></p>
+
+</div>
+
+<div class="section" id="performance">
+<h2><a name="performance">Performance</a></h2>
+<p>Initial benchmarks using Psyco indicate the possibility of a 2x speedup when
+it is used. The number of documents to be indexed before in-memory data is
+flushed to disk can be adjusted by calling <tt class="literal"><span class="pre">.setMergeFactor</span></tt> (the default is 20).</p>
+
+</div>
+</div>
+
+
+  
+          </div>
+
+</body>
+</html>
