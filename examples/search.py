@@ -329,6 +329,83 @@ def main():
         q = dumbWildSearch('wood*', all_keywords_str)
         runQuery(q, searcher)
 
+    def querystring_to_querysearch(search_string):
+        """Parses search_string in (subset of) Lucene search format.
+        See http://lucene.apache.org/java/docs/queryparsersyntax.html
+        Support:
+            *   Phrase ("") - only one
+            *   boolean simple and(+)/or(' ')/not(-) - no groupings, no AND/OR
+                or is implicit (if use space) unlike Google where + (and)
+                is implicit
+            *   fields (:) - only one
+            *   wildcard (. and ?) - only one
+                Unlike lucene can wildcard at start of search term
+            *   regular Terms (i.e. 'text' or body search) with:
+                *   boosting (^n) - may not be working!
+                *   fuzzy (~) (Proximity?) - may not be working!
+        
+        NOTE! Currently relies on all_keywords_str being set, consider passing in?
+        """
+        search_string = search_string.lower()
+        
+        # TODO FIXME strip leading/trailing whitespace
+        
+        # phraseSearch if search_string like; "fox and the crow"
+        # ONLY support search for a single phrase
+        if search_string.startswith("\"") and search_string.endswith("\""):
+            # Assume only one
+            q = phraseSearch(search_string[1:-1])
+    
+        # boolSearch if search_string is like; +fox lion -crow 
+        elif "+" in search_string or "-" in search_string or " " in search_string:
+            # Expects spaces in front of modifiers (+ and -)
+            # could perform:
+            #search_string.replace('+', ' +')
+            #search_string.replace('-', ' -')
+            # not sure if it makes sense though, would allow query string
+            # 'lion-crow+fox' to work
+            terms = search_string.split()
+            ands, ors, nots = [], [], []
+            for t in terms:
+                if t.startswith("+"):
+                    ands.append(t[1:])
+                elif t.startswith("-"):
+                    nots.append(t[1:])
+                else:
+                    ors.append(t)
+            q = boolSearch(ands, ors, nots)
+        
+        # fieldSearch if search_string like; title:frog
+        elif ":" in search_string:
+            # Assume only one
+            terms = search_string.split(':')
+            q = fieldSearch(terms[1], terms[0])
+        
+        # wildcard search if search_string is like; fox* (or f.x)
+        elif "." in search_string or "*" in search_string:
+            # Assume only one
+            q = dumbWildSearch(search_string, all_keywords_str)
+            
+        # termSearch if term is like: fox
+        else:
+            q = termSearch(search_string)
+        
+        return q
+    
+    print ''
+    print 'query string examples'
+    test_queries = [
+                    'fox',
+                    'f.x',
+                    'title:frog',
+                    '"fox and the crow"',
+                    '+fox lion -crow',
+                    '',
+                    ]
+    for test_query_str in test_queries:
+        q = querystring_to_querysearch(test_query_str)
+        runQuery(q, searcher)
+        
     searcher.close()
     
     print time.time() - tt
