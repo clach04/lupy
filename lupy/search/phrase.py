@@ -92,12 +92,12 @@ class PhraseQuery:
         buffer = ''
         if not self.field == f :
             buffer += f + ':'
-        buffer += '\\'
+        buffer += '"'
 
         for term in self.terms[:-1]:
             buffer += term.text() + ' '
             
-        buffer += self.terms[-1].text() + '\\'
+        buffer += self.terms[-1].text() + '"'
 
         if self.slop != 0:
             buffer += '~' + str(self.slop)
