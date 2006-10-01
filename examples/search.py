@@ -12,6 +12,7 @@ from lupy.search.term import TermQuery
 from lupy.search.phrase import PhraseQuery
 from lupy.search.boolean import BooleanQuery
 
+import demo_config
 
 def printHits(hits):
     if len(hits) == 0:
@@ -94,9 +95,13 @@ if __name__ == "__main__":
     """
     
     import time    
+    
+    index_info = demo_config.get_config('demo.ini')
+    index_name = index_info['index']
+    
     tt = time.time()
     
-    searcher = IndexSearcher('aesopind')
+    searcher = IndexSearcher(index_name)
 
     # Note that all queries have to be submitted in lower-case...
 

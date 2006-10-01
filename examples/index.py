@@ -14,6 +14,8 @@ import cStringIO as StringIO
 from lupy.index.indexwriter import IndexWriter
 from lupy import document
 
+import demo_config
+
 class Indexer:
 
 
@@ -93,10 +95,15 @@ class Indexer:
 if __name__ == "__main__":
 
     import time
+    
+    index_info = demo_config.get_config('demo.ini')
+    index_name = index_info['index']
+    document_dir = index_info['document_dir']
+    
     tt = time.time()
     # create a new index in a directory
-    i = Indexer('aesopind', True)
+    i = Indexer(index_name, True)
 
     # recursively index the files in a directory
-    i.index('aesop')
+    i.index(document_dir)
     print 'Elapsed time:', time.time() - tt

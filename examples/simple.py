@@ -7,6 +7,7 @@
 import os, sys, time
 from lupy.indexer import Index
 
+import demo_config
 
 def main():
     """An example of using the Indexer wrapper.
@@ -18,10 +19,13 @@ def main():
     # TODO -i directory to recursively index
     
     import time
+    
+    index_info = demo_config.get_config('demo.ini')
+    
     tt = time.time()
 
-    filedir = 'aesop'
-    indexName = 'aesopind'
+    filedir = index_info['document_dir']
+    indexName = index_info['index']
 
     if os.path.exists(indexName):
         for f in os.listdir(indexName):
