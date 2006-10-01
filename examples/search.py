@@ -224,36 +224,41 @@ def main():
     tt = time.time()
     
     searcher = IndexSearcher(index_name)
-
-    # enumerate through index, and get all Terms
-    # this should be done as SOON as the index is opened BUT before it is used
-    # this is potentially VERY slow
-    all_keywords=[]
-    if isinstance(searcher.reader, lupy.index.segmentmerger.SegmentReader):
-        for tuple_info in searcher.reader.tis.enum:
-            (term_struct, key_pos) = tuple_info 
-            field_name = term_struct.field()
-            keyword_str = term_struct.text()
-            ## will get duplicates if keyword exists in different terms (e.g. title and text)
-            ## fastest thing to do is NOT insert into container IF it is already present
-            all_keywords.append(keyword_str)
-            #print field_name, ':', keyword_str
-    elif isinstance(searcher.reader, lupy.index.segmentmerger.SegmentsReader):
-        for tmp_reader in searcher.reader.readers:
-            for tuple_info in  tmp_reader.tis.enum:
-                (term_struct, key_pos) = tuple_info
+    
+    perform_wildcard_search=True
+    #perform_wildcard_search=False
+    all_keywords_str=''
+    if perform_wildcard_search:
+        # enumerate through index, and get all Terms
+        # this should be done as SOON as the index is opened BUT before it is used
+        # otherwise will not "see" all search terms due to (previous) file IO
+        # WARNING: this is VERY slow
+        all_keywords=[]
+        if isinstance(searcher.reader, lupy.index.segmentmerger.SegmentReader):
+            for tuple_info in searcher.reader.tis.enum:
+                (term_struct, key_pos) = tuple_info 
                 field_name = term_struct.field()
                 keyword_str = term_struct.text()
                 ## will get duplicates if keyword exists in different terms (e.g. title and text)
                 ## fastest thing to do is NOT insert into container IF it is already present
                 all_keywords.append(keyword_str)
                 #print field_name, ':', keyword_str
-    ## TODO FIXME remove duplicates? use dict?
-    #print 'all keywords', all_keywords
-    all_keywords = unique(all_keywords)
-    #print 'all keywords', all_keywords
-    all_keywords_str = ' '.join(all_keywords)
-    #print 'all_keywords_str', all_keywords_str
+        elif isinstance(searcher.reader, lupy.index.segmentmerger.SegmentsReader):
+            for tmp_reader in searcher.reader.readers:
+                for tuple_info in  tmp_reader.tis.enum:
+                    (term_struct, key_pos) = tuple_info
+                    field_name = term_struct.field()
+                    keyword_str = term_struct.text()
+                    ## will get duplicates if keyword exists in different terms (e.g. title and text)
+                    ## fastest thing to do is NOT insert into container IF it is already present
+                    all_keywords.append(keyword_str)
+                    #print field_name, ':', keyword_str
+        ## TODO FIXME remove duplicates? use dict?
+        #print 'all keywords', all_keywords
+        all_keywords = unique(all_keywords)
+        #print 'all keywords', all_keywords
+        all_keywords_str = ' '.join(all_keywords)
+        #print 'all_keywords_str', all_keywords_str
     
     
     
@@ -318,10 +323,11 @@ def main():
     q = termSearch('woodman')
     runQuery(q, searcher)
     
-    print 'wildcard term search (slow)' # but most cost was spent at "list keywords time"
-    #q = dumbWildSearch('some*', all_keywords_str)
-    q = dumbWildSearch('wood*', all_keywords_str)
-    runQuery(q, searcher)
+    if perform_wildcard_search:
+        print 'wildcard term search (slow)' # but most cost was spent at "list keywords time"
+        #q = dumbWildSearch('some*', all_keywords_str)
+        q = dumbWildSearch('wood*', all_keywords_str)
+        runQuery(q, searcher)
 
     searcher.close()
     
