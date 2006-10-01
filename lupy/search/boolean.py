@@ -83,9 +83,12 @@ class BooleanQuery:
 
         for c in self.clauses:
             if c.prohibited:
-                buffer += '-'
+                buffer += ' -'
             elif c.required:
-                buffer += '+'
+                buffer += ' +'
+            else:
+                # this optional
+                buffer += ' '
 
             subQuery = c.query
             if isinstance(subQuery, BooleanQuery):
