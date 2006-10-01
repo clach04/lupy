@@ -105,8 +105,12 @@ if __name__ == "__main__":
 
     # Note that all queries have to be submitted in lower-case...
 
-    print 'Term search'
+    print 'Term search 1'
     q = termSearch('fox')
+    runQuery(q, searcher)
+    
+    print 'Term search 2'
+    q = termSearch('lion')
     runQuery(q, searcher)
     
     print 'Phrase search'
@@ -114,20 +118,24 @@ if __name__ == "__main__":
     runQuery(q, searcher)
 
     # A boolean search equiv to 'x and not y'
-    print 'Boolean search 1 (x and not y)'
+    print 'Boolean search 1 (must have x and not y)'
     q = boolSearch(['fox'], [], ['crow', 'lion'])
     runQuery(q, searcher)
 
-    print 'Boolean search 2 (x and y)'
-    q = boolSearch(['fox', 'crow'], [], [])
+    print 'Boolean search 2 (must have x, must have y)'
+    q = boolSearch(['fox', 'lion'], [], [])
     runQuery(q, searcher)
 
-    print 'Boolean search 3.a (x or y)'
-    q = boolSearch(['fox'], ['crow'], [])
+    print 'Boolean search 3.a (must have x, y is optional)'
+    q = boolSearch(['fox'], ['lion'], [])
     runQuery(q, searcher)
 
-    print 'Boolean search 3.b (x or y)'
-    q = boolSearch([], ['fox', 'crow'], [])
+    print 'Boolean search 3.b (must have x, y is optional)'
+    q = boolSearch(['lion'], ['fox'], [])
+    runQuery(q, searcher)
+
+    print 'Boolean search 3.c (x is optional, y is optional)'
+    q = boolSearch([], ['fox', 'lion'], [])
     runQuery(q, searcher)
 
     # Search the title field
