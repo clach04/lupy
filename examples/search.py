@@ -105,17 +105,33 @@ if __name__ == "__main__":
 
     # Note that all queries have to be submitted in lower-case...
 
+    print 'Term search'
     q = termSearch('fox')
     runQuery(q, searcher)
     
+    print 'Phrase search'
     q = phraseSearch('fox and the crow')
     runQuery(q, searcher)
 
     # A boolean search equiv to 'x and not y'
+    print 'Boolean search 1 (x and not y)'
     q = boolSearch(['fox'], [], ['crow', 'lion'])
     runQuery(q, searcher)
 
+    print 'Boolean search 2 (x and y)'
+    q = boolSearch(['fox', 'crow'], [], [])
+    runQuery(q, searcher)
+
+    print 'Boolean search 3.a (x or y)'
+    q = boolSearch(['fox'], ['crow'], [])
+    runQuery(q, searcher)
+
+    print 'Boolean search 3.b (x or y)'
+    q = boolSearch([], ['fox', 'crow'], [])
+    runQuery(q, searcher)
+
     # Search the title field
+    print 'Title search'
     q = titleSearch('frog')
     runQuery(q, searcher)
 
