@@ -152,12 +152,40 @@ def boolSearch(ands=[], ors=[], nots=[]):
     return q
         
 
+def lucene_wildcard_to_regex(in_str):
+    """Takes a Lucene style wild card string and returns a regex search string.
+    See http://lucene.apache.org/java/docs/queryparsersyntax.html
+    Turns '.' and '*' into regex wildcards. Currently maps to
+    regex that will match a word in string, i.e. 
+    
+        'fox*' to match 'foxes', but not 'fox hole' (due to space)
+    
+    Unlike Lucene you can place a wild card at the start of the search term
+    BUT a search term of only wildcards is not allowed and an empty
+    string is returned.
+    TODO! currently inefficient but easy to read source
+    """
+    # escape search string, this may be redundant depending on how the
+    # Terms in the index where tokenized at index time
+    # this will also escape our Lucene wildcards
+    tmp_str = re.escape(in_str)
+    
+    # Assume that Lucene wildcards are always escaped in the same way
+    # i.e. assume 
+    #   '.' -> r'\.'
+    #   '*' -> r'\*'
+    tmp_str = tmp_str.replace(r'\.', r'\S')
+    tmp_str = tmp_str.replace(r'\*', r'\w*')
+    return tmp_str 
+
+    
 def dumbWildSearch(qStr, keyword_str):
     """Not really a proper PrefixQuery and/or WildcardQuery 
-    takes in qStr and searches for *qStr* (wildcard at beginning and end)
+    takes in qStr containing Lucene wildcards.
+    This actually searches ALL Terms in the index to find matches
+    then uses the found terms are input to a boolean (OR) search.
     """
-    search_word  = re.escape(qStr)
-    regex_keyword_search_str = """\w*%s\w*""" % search_word 
+    regex_keyword_search_str = lucene_wildcard_to_regex(qStr)
     or_search_terms = re.findall(regex_keyword_search_str, keyword_str)
     q = boolSearch([], or_search_terms, [])
     return q
@@ -271,8 +299,8 @@ def main():
     runQuery(q, searcher)
     
     print 'wildcard term search (slow)' # but most cost was spent at "list keywords time"
-    #q = dumbWildSearch('some', all_keywords_str)
-    q = dumbWildSearch('wood', all_keywords_str)
+    #q = dumbWildSearch('some*', all_keywords_str)
+    q = dumbWildSearch('wood*', all_keywords_str)
     runQuery(q, searcher)
 
     searcher.close()
