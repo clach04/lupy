@@ -6,13 +6,87 @@
 """Examples of different kinds of query being run through an IndexSearcher.
 """
 
+import re
+
 from lupy.index.term import Term
 from lupy.search.indexsearcher import IndexSearcher
 from lupy.search.term import TermQuery
 from lupy.search.phrase import PhraseQuery
 from lupy.search.boolean import BooleanQuery
 
+import lupy
+
 import demo_config
+
+# unique container function
+# from http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/52560
+def unique(s):
+    """Return a list of the elements in s, but without duplicates.
+
+    For example, unique([1,2,3,1,2,3]) is some permutation of [1,2,3],
+    unique("abcabc") some permutation of ["a", "b", "c"], and
+    unique(([1, 2], [2, 3], [1, 2])) some permutation of
+    [[2, 3], [1, 2]].
+
+    For best speed, all sequence elements should be hashable.  Then
+    unique() will usually work in linear time.
+
+    If not possible, the sequence elements should enjoy a total
+    ordering, and if list(s).sort() doesn't raise TypeError it's
+    assumed that they do enjoy a total ordering.  Then unique() will
+    usually work in O(N*log2(N)) time.
+
+    If that's not possible either, the sequence elements must support
+    equality-testing.  Then unique() will usually work in quadratic
+    time.
+    """
+
+    n = len(s)
+    if n == 0:
+        return []
+
+    # Try using a dict first, as that's the fastest and will usually
+    # work.  If it doesn't work, it will usually fail quickly, so it
+    # usually doesn't cost much to *try* it.  It requires that all the
+    # sequence elements be hashable, and support equality comparison.
+    u = {}
+    try:
+        for x in s:
+            u[x] = 1
+    except TypeError:
+        del u  # move on to the next method
+    else:
+        return u.keys()
+
+    # We can't hash all the elements.  Second fastest is to sort,
+    # which brings the equal elements together; then duplicates are
+    # easy to weed out in a single pass.
+    # NOTE:  Python's list.sort() was designed to be efficient in the
+    # presence of many duplicate elements.  This isn't true of all
+    # sort functions in all languages or libraries, so this approach
+    # is more effective in Python than it may be elsewhere.
+    try:
+        t = list(s)
+        t.sort()
+    except TypeError:
+        del t  # move on to the next method
+    else:
+        assert n > 0
+        last = t[0]
+        lasti = i = 1
+        while i < n:
+            if t[i] != last:
+                t[lasti] = last = t[i]
+                lasti += 1
+            i += 1
+        return t[:lasti]
+
+    # Brute force is all that's left.
+    u = []
+    for x in s:
+        if x not in u:
+            u.append(x)
+    return u
 
 def printHits(hits):
     if len(hits) == 0:
@@ -77,7 +151,18 @@ def boolSearch(ands=[], ors=[], nots=[]):
     
     return q
         
-        
+
+def dumbWildSearch(qStr, keyword_str):
+    """Not really a proper PrefixQuery and/or WildcardQuery 
+    takes in qStr and searches for *qStr* (wildcard at beginning and end)
+    """
+    search_word  = re.escape(qStr)
+    regex_keyword_search_str = """\w*%s\w*""" % search_word 
+    or_search_terms = re.findall(regex_keyword_search_str, all_keywords_str)
+    q = boolSearch([], or_search_terms, [])
+    return q
+    
+    
 def runQuery(q, searcher):
     """The run a query through a searcher and return the hits"""
 
@@ -103,6 +188,38 @@ if __name__ == "__main__":
     
     searcher = IndexSearcher(index_name)
 
+    # enumerate through index, and get all Terms
+    # this should be done as SOON as the index is opened BUT before it is used
+    # this is potentially VERY slow
+    all_keywords=[]
+    if isinstance(searcher.reader, lupy.index.segmentmerger.SegmentReader):
+        for tuple_info in searcher.reader.tis.enum:
+            (term_struct, key_pos) = tuple_info 
+            field_name = term_struct.field()
+            keyword_str = term_struct.text()
+            ## will get duplicates if keyword exists in different terms (e.g. title and text)
+            ## fastest thing to do is NOT insert into container IF it is already present
+            all_keywords.append(keyword_str)
+            #print field_name, ':', keyword_str
+    elif isinstance(searcher.reader, lupy.index.segmentmerger.SegmentsReader):
+        for tmp_reader in searcher.reader.readers:
+            for tuple_info in  tmp_reader.tis.enum:
+                (term_struct, key_pos) = tuple_info
+                field_name = term_struct.field()
+                keyword_str = term_struct.text()
+                ## will get duplicates if keyword exists in different terms (e.g. title and text)
+                ## fastest thing to do is NOT insert into container IF it is already present
+                all_keywords.append(keyword_str)
+                #print field_name, ':', keyword_str
+    ## TODO FIXME remove duplicates? use dict?
+    #print 'all keywords', all_keywords
+    all_keywords = unique(all_keywords)
+    #print 'all keywords', all_keywords
+    all_keywords_str = ' '.join(all_keywords)
+    #print 'all_keywords_str', all_keywords_str
+    
+    
+    
     # Note that all queries have to be submitted in lower-case...
 
     print 'Term search 1'
@@ -141,6 +258,21 @@ if __name__ == "__main__":
     # Search the title field
     print 'Title search'
     q = titleSearch('frog')
+    runQuery(q, searcher)
+
+    print 'Exact term search (default)'
+    #q = termSearch('some')
+    q = termSearch('wood')
+    runQuery(q, searcher)
+    
+    print 'Exact term search (default)'
+    #q = termSearch('something')
+    q = termSearch('woodman')
+    runQuery(q, searcher)
+    
+    print 'wildcard term search (slow)' # but most cost was spent at "list keywords time"
+    #q = dumbWildSearch('some', all_keywords_str)
+    q = dumbWildSearch('wood', all_keywords_str)
     runQuery(q, searcher)
 
     searcher.close()
