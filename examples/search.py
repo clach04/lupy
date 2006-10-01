@@ -102,6 +102,15 @@ def termSearch(qStr):
     return q
 
 
+def fieldSearch(qStr, fieldname):
+    """Search for qStr only on specified fieldname
+    """
+    t = Term(fieldname, qStr)
+    q = TermQuery(t)
+    
+    return q
+        
+        
 def titleSearch(qStr):
     t = Term('title', qStr)
     q = TermQuery(t)
@@ -284,9 +293,20 @@ def main():
     runQuery(q, searcher)
 
     # Search the title field
+    print 'field search on "title"'
+    q = fieldSearch('frog', 'title')
+    runQuery(q, searcher)
+    
+    # Search the title field
+    print 'field search on "invalidtitle"'
+    q = fieldSearch('frog', 'invalidtitle')
+    runQuery(q, searcher)
+    
+    # Search the title field
     print 'Title search'
     q = titleSearch('frog')
     runQuery(q, searcher)
+    
 
     print 'Exact term search (default)'
     #q = termSearch('some')
