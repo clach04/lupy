@@ -16,14 +16,42 @@ Operating System :: Microsoft :: Windows
 Operating System :: POSIX
 """
 
+import os
+try:
+    # clach04
+    # not sure why this isn't part of distutils
+    # I'm probably using distutils incorrectly
+    # remove manifest for sdist
+    os.remove('MANIFEST')
+    os.remove('MANIFEST.in')
+except OSError, info:
+    if info.errno == 2:
+        pass
+    else:
+        raise
+
+MANIFEST_in = """
+exclude .svn
+global-exclude .svn
+include *.html
+include *.txt
+recursive-include examples/aesop *.txt
+"""
+
+file_ptr = open('MANIFEST.in', 'w')
+file_ptr.write(MANIFEST_in)
+file_ptr.close()
+
 setup(name="Lupy",
-      version="0.2.1",
-      description="Lupy - Full Text Indexing and Search",
+      version="0.2.2",
+      description="Lupy - Full Text Indexing and Search - modified by clach04 _at_ users.sourceforge.net",
       author="Amir Bakhtiar",
       author_email="amir@divmod.org",
       url="http://www.divmod.org/",
       license="GNU LGPL",
       long_description="A full-text indexer compatible with Jakarta Lucene 1.2.",
       classifiers = filter(None, classifiers.split("\n")),
-      packages=['lupy', 'lupy.index', 'lupy.search'])
+      packages=['lupy', 'lupy.index', 'lupy.search', 'examples'],
+      package_data={'examples': ['']},
+    )
 

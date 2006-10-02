@@ -1,4 +1,24 @@
+Release 0.2.2
+-------------
+
+01 Oct 2006
+
+Enhanced examples:
+
+- use ini file for document and idnex location
+- more boolean examples
+- boolean print query bug fix
+- phrase print query bug fix
+- added expensive wildcard search, this is not a real Lucence WildCardQuery
+- added field search query type
+- added query string support to examples
+
+Added examples to setup.py
+
+NOT released, private clach04 version
+
 Release 0.2.1
+-------------
 
 11 May 2004
 
